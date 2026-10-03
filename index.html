@@ -1,0 +1,1246 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CLOUD Library</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Inter:wght@400;500;600&display=swap');
+
+        :root {
+            --bg-card: rgba(10, 10, 12, 0.4);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --border-hover: rgba(255, 255, 255, 0.4);
+            --text-main: #ffffff;
+            --text-muted: #a1a1aa;
+            --accent: #e4e4e7;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.4); }
+
+        body {
+            background-color: #000;
+            color: var(--text-main);
+            font-family: 'Inter', system-ui, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* WebGL Background Canvas */
+        #background-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+            display: block;
+        }
+
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 50px 32px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Stylized Header */
+        .header {
+            margin-bottom: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .header-title-placeholder {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 3rem;
+            letter-spacing: 0.05em;
+            visibility: hidden; /* Removes the title visually but keeps its exact space */
+        }
+
+        .search-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 12px 24px;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            width: 100%;
+            max-width: 350px;
+            backdrop-filter: blur(10px);
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+        }
+
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 28px;
+        }
+
+        /* Glassmorphism Game Cards */
+        .game-card {
+            background-color: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .game-card:hover {
+            transform: translateY(-6px);
+            border-color: var(--border-hover);
+            background-color: rgba(20, 20, 24, 0.6);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 15px rgba(255,255,255,0.05);
+        }
+
+        .image-wrapper {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            overflow: hidden;
+            position: relative;
+            background-color: #050505;
+        }
+
+        .image-wrapper::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.8) 100%);
+            z-index: 1;
+        }
+
+        .game-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.8s ease;
+        }
+
+        .game-card:hover .game-image {
+            transform: scale(1.05);
+        }
+
+        .game-info {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 2;
+            position: relative;
+            margin-top: -40px; /* Pull text up into the image gradient */
+        }
+
+        .game-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            font-family: 'Montserrat', sans-serif;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #ffffff;
+            letter-spacing: -0.02em;
+        }
+
+        .game-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(4px);
+        }
+
+        .error-message {
+            color: #ff5555;
+            text-align: center;
+            grid-column: 1 / -1;
+            padding: 40px;
+            background: rgba(255,0,0,0.05);
+            border: 1px solid rgba(255,0,0,0.2);
+            border-radius: 8px;
+            backdrop-filter: blur(8px);
+        }
+
+        /* Overlay & Video Surface */
+        #game-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #000000;
+            z-index: 1000;
+            flex-direction: column;
+            color: var(--text-main);
+        }
+
+        .top-bar {
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            position: absolute;
+            width: 100%;
+            top: 0;
+            z-index: 10;
+            transition: opacity 0.3s ease;
+        }
+
+        #game-overlay:hover .top-bar { opacity: 1; }
+
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+            color: #ffffff;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .close-btn {
+            cursor: pointer;
+            padding: 4px 16px 4px 0;
+            color: #a1a1aa;
+            font-size: 16px;
+            border-right: 1px solid rgba(255, 255, 255, 0.15);
+            margin-right: 16px;
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover { color: #ffffff; }
+
+        #timer {
+            font-family: 'Inter', monospace;
+            font-size: 13px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        #fullscreen-btn {
+            font: 600 11px Inter, system-ui, sans-serif;
+            letter-spacing: .08em;
+            border: 1px solid rgba(255,255,255,.09);
+            border-radius: 4px;
+            background: rgba(255,255,255,.05);
+            color: #a1a1aa;
+            padding: 5px 10px;
+            user-select: none;
+            margin-right: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #fullscreen-btn:hover {
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        #timer.warning { color: #f59e0b; border-color: #f59e0b; }                                                                                                                                            
+        #timer.expired { color: #ef4444; border-color: #ef4444; animation: pulse 1s infinite; }                                                                                                              
+
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }                                                                                                                              
+
+        .loading-content {                                                                                                                                                                               
+            flex: 1;                                                                                                                                                                                     
+            display: flex;                                                                                                                                                                               
+            flex-direction: column;                                                                                                                                                                      
+            align-items: center;                                                                                                                                                                         
+            justify-content: center;                                                                                                                                                                     
+            background-color: #000;
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+        }                                                                                                                                                                                                
+
+        .spinner {                                                                                                                                                                                       
+            width: 40px;                                                                                                                                                                                 
+            height: 40px;                                                                                                                                                                                
+            border: 2px solid rgba(255, 255, 255, 0.1);                                                                                                                                                  
+            border-top-color: #ffffff;                                                                                                                                                                   
+            border-radius: 50%;                                                                                                                                                                          
+            animation: spin 0.8s cubic-bezier(0.5, 0, 0.5, 1) infinite;                                                                                                                                  
+            margin-bottom: 24px;                                                                                                                                                                         
+        }                                                                                                                                                                                                
+
+        @keyframes spin {                                                                                                                                                                                
+            100% { transform: rotate(360deg); }                                                                                                                                                          
+        }                                                                                                                                                                                                
+
+        .loading-title {                                                                                                                                                                                 
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;                                                                                                                                                                            
+            font-size: 18px;                                                                                                                                                                             
+            margin-bottom: 8px;                                                                                                                                                                          
+            letter-spacing: 0.05em;                                                                                                                                                                       
+            text-transform: uppercase;                                                                                                                                                                  
+        }                                                                                                                                                                                                
+
+        .loading-subtitle { color: #a1a1aa; font-size: 14px; }                                                                                                                                               
+        .loading-title.error { color: #ff5555; }                                                                                                                                                         
+
+        #screenSurface {                                                                                                                                                                                 
+            position: absolute;                                                                                                                                                                          
+            top: 0; left: 0; right: 0; bottom: 0;                                                                                                                                                                
+            display: none;                                                                                                                                                                               
+            background: #000;                                                                                                                                                                            
+            overflow: hidden;
+            z-index: 1;
+        }                                                                                                                                                                                                
+        #screenSurface.ready { display: block; }                                                                                                                                                         
+
+        video { display: none; width: 100%; height: 100%; object-fit: contain; }                                                                                                                         
+        video.ready { display: block; pointer-events: auto; user-select: none; touch-action: none; outline: none; }                                                                                                     
+
+        #inputSurface { display:none !important; }                                                               
+    </style>
+</head>
+<body>
+    <!-- Contour WebGL Background -->
+    <canvas id="background-canvas"></canvas>
+
+    <div class="container">
+        <div class="header">
+            <div class="header-title-placeholder">CLOUD</div>
+            <input type="text" class="search-input" placeholder="Search games..." oninput="filterGames(this.value)">
+        </div>
+        <div id="games-grid" class="games-grid">
+        </div>
+    </div>
+
+    <!-- CLOUD Game Overlay Surface -->
+    <div id="game-overlay">
+        <div class="top-bar">
+            <div class="top-bar-left">
+                <span class="close-btn" onclick="closeOverlay()" title="Close instance">✕</span>
+                <span id="overlay-game-name"></span>
+            </div>
+            <div>
+                <span id="fullscreen-btn" onclick="toggleFullscreen()">FULLSCREEN</span>
+                <span id="timer">--:--</span>
+            </div>
+        </div>
+        <div class="loading-content" id="loading-view">
+            <div class="spinner" id="loading-spinner"></div>
+            <div class="loading-title" id="loading-title">starting</div>
+            <div class="loading-subtitle" id="loading-subtitle">initializing connection</div>
+        </div>
+        <div id="screenSurface">
+            <video id="cloudVideo" autoplay playsinline tabindex="-1"></video>
+            <div id="inputSurface" tabindex="-1"></div>
+        </div>
+    </div>
+
+    <!-- NATIVE WEBGL CONTOUR SCRIPT -->
+    <script>
+        const canvas = document.getElementById("background-canvas");
+        const gl = canvas.getContext("webgl", { antialias: true, powerPreference: "high-performance" });
+        
+        if (!gl) {
+            console.error("WebGL is not supported.");
+        } else {
+            const vertexShaderSource = `
+                attribute vec2 position;
+                void main() { gl_Position = vec4(position, 0.0, 1.0); }
+            `;
+            const fragmentShaderSource = `
+                precision highp float;
+                uniform vec2 r; uniform float t;
+                float hash21(vec2 p) {
+                    p = fract(p * vec2(123.34, 456.21));
+                    p += dot(p, p + 45.32);
+                    return fract(p.x * p.y);
+                }
+                float noise(vec2 p) {
+                    vec2 i = floor(p); vec2 f = fract(p);
+                    f = f * f * (3.0 - 2.0 * f);
+                    float a = hash21(i); float b = hash21(i + vec2(1.0, 0.0));
+                    float c = hash21(i + vec2(0.0, 1.0)); float d = hash21(i + vec2(1.0, 1.0));
+                    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+                }
+                float fbm(vec2 p) {
+                    float value = 0.0; float amplitude = 0.5;
+                    value += noise(p) * amplitude;
+                    p = p * 2.02 + 17.13; amplitude *= 0.5; value += noise(p) * amplitude;
+                    p = p * 2.03 + 11.71; amplitude *= 0.5; value += noise(p) * amplitude;
+                    p = p * 2.01 + 23.17; amplitude *= 0.5; value += noise(p) * amplitude;
+                    p = p * 2.04 + 7.31; amplitude *= 0.5; value += noise(p) * amplitude;
+                    return value;
+                }
+                float field(vec2 p) {
+                    float n1 = fbm(p * 0.85 + vec2(t * 0.018, -t * 0.014));
+                    float n2 = fbm(p * 1.7 - vec2(t * 0.011, t * 0.017));
+                    float n3 = fbm(p * 3.1 + vec2(-t * 0.009, t * 0.013));
+                    float distortion = n1 * 1.35 + n2 * 0.45 + n3 * 0.16;
+                    float wave = sin(p.x * 2.3 + distortion * 5.5 + t * 0.025) * 0.09;
+                    return distortion + wave;
+                }
+                void main() {
+                    vec2 uv = gl_FragCoord.xy / r.xy;
+                    vec2 p = uv - 0.5;
+                    float aspect = r.x / r.y;
+                    p.x *= aspect;
+                    p *= 2.5;
+                    float f = field(p);
+                    float levels = 26.0;
+                    float scaled = f * levels;
+                    float line = 1.0 - smoothstep(0.015, 0.065, abs(fract(scaled) - 0.5));
+                    float softLine = 1.0 - smoothstep(0.04, 0.16, abs(fract(scaled) - 0.5));
+                    vec3 background = vec3(0.004, 0.004, 0.004);
+                    vec3 lineColor = vec3(0.30, 0.30, 0.30);
+                    float intensity = line * 0.86 + softLine * 0.055;
+                    vec3 color = mix(background, lineColor, intensity);
+                    float vignette = 1.0 - smoothstep(0.25, 1.35, length(p * 0.42));
+                    color *= 0.80 + vignette * 0.20;
+                    gl_FragColor = vec4(color, 1.0);
+                }
+            `;
+            function createShader(type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                    console.error(gl.getShaderInfoLog(shader));
+                    gl.deleteShader(shader); return null;
+                }
+                return shader;
+            }
+            const vertexShader = createShader(gl.VERTEX_SHADER, vertexShaderSource);
+            const fragmentShader = createShader(gl.FRAGMENT_SHADER, fragmentShaderSource);
+            const program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            
+            gl.useProgram(program);
+            const vertices = new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]);
+            const buffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+            const position = gl.getAttribLocation(program, "position");
+            gl.enableVertexAttribArray(position);
+            gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+            const resolutionLocation = gl.getUniformLocation(program, "r");
+            const timeLocation = gl.getUniformLocation(program, "t");
+            
+            function resize() {
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                canvas.width = Math.floor(window.innerWidth * dpr);
+                canvas.height = Math.floor(window.innerHeight * dpr);
+                gl.viewport(0, 0, canvas.width, canvas.height);
+            }
+            window.addEventListener("resize", resize);
+            resize();
+            const start = performance.now();
+            function render(now) {
+                const elapsed = (now - start) * 0.001;
+                gl.useProgram(program);
+                gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+                gl.uniform1f(timeLocation, elapsed);
+                gl.drawArrays(gl.TRIANGLES, 0, 6);
+                requestAnimationFrame(render);
+            }
+            requestAnimationFrame(render);
+        }
+    </script>
+
+    <!-- CLOUD BACKEND SCRIPT -->
+    <script>                                                                                                                                                                                            
+        const apiEndpoint = 'https://cdn.vipersfutbol.com/stratus';                                                                                                                                   
+        const grid = document.getElementById('games-grid');                                                                                                                                              
+
+        let activeGameKey = null;                                                                                                                                                                        
+        let session = null;                                                                                                                                                                              
+        let socket = null;                                                                                                                                                                               
+        let peer = null;                                                                                                                                                                                 
+        let remoteStream = null;                                                                                                                                                                         
+        let inputChannel = null;                                                                                                                                                                         
+        let timerInterval = null;                                                                                                                                                                        
+        let secondsLeft = null;                                                                                                                                                                          
+
+        const fallbackData = [                                                                                                                                                                           
+            {"key":"bs0078","name":"DRAGON BALL: Sparking! ZERO","cover":"https://download-oss.raccoongame.com/uploads/image/20260729/20260729175807346.jpg", "tags":["Action","Fighting","Adventure"]},
+            {"key":"bs0095","name":"Red Dead Redemption","cover":"https://download-oss.raccoongame.com/uploads/image/20260717/20260717175642509.jpg", "tags":["Action","Adventure","3A"]},              
+            {"key":"bs0094","name":"PRAGMATA","cover":"https://download-oss.raccoongame.com/uploads/image/20260717/20260717173745616.jpg", "tags":["Action","Shooting","Adventure"]},                   
+            {"key":"bs0093","name":"Battlefield 6","cover":"https://download-oss.raccoongame.com/uploads/image/20260731/20260731161444895.jpg", "tags":["Shooting","Action"]},                          
+            {"key":"bs0060","name":"Gym Manager","cover":"https://download-oss.raccoongame.com/uploads/image/20260703/2026070311051242.jpg", "tags":["Simulation","Casual","Easy"]},                    
+            {"key":"bs0087","name":"Detroit: Become Human","cover":"https://download-oss.raccoongame.com/uploads/image/20260724/20260724172917805.jpg", "tags":["Action","RPG"]}                        
+        ];                                                                                                                                                                                               
+
+        async function fetchAndRenderGames() {                                                                                                                                                           
+            try {                                                                                                                                                                                        
+                const response = await fetch(`${apiEndpoint}/games`);                                                                                                                                  
+                if (!response.ok) throw new Error('Network response was not ok');                                                                                                                        
+                const data = await response.json();                                                                                                                                                      
+                const list = Array.isArray(data) ? data : (data.games || []);                                                                                                                          
+                renderGames(list.length > 0 ? list : fallbackData);                                                                                                                                      
+            } catch (error) {                                                                                                                                                                            
+                renderGames(fallbackData);                                                                                                                                                               
+            }                                                                                                                                                                                            
+        }                                                                                                                                                                                                
+
+        function renderGames(gamesArray) {                                                                                                                                                               
+            grid.innerHTML = '';                                                                                                                                                                         
+            if (!gamesArray || gamesArray.length === 0) {                                                                                                                                              
+                grid.innerHTML = '<div class="error-message">No games found.</div>';                                                                                                                   
+                return;                                                                                                                                                                                  
+            }                                                                                                                                                                                            
+            gamesArray.forEach(game => {                                                                                                                                                                 
+                const card = document.createElement('div');                                                                                                                                              
+                card.className = 'game-card';                                                                                                                                                            
+                card.onclick = () => openOverlay(game);                                                                                                                                                  
+
+                const imgWrapper = document.createElement('div');                                                                                                                                        
+                imgWrapper.className = 'image-wrapper';                                                                                                                                                  
+                const img = document.createElement('img');                                                                                                                                               
+                img.className = 'game-image';                                                                                                                                                            
+                img.src = game.cover || game.image || '';                                                                                                                                            
+                img.alt = game.name;                                                                                                                                                                     
+                img.loading = 'lazy';                                                                                                                                                                    
+                imgWrapper.appendChild(img);                                                                                                                                                             
+
+                const info = document.createElement('div');                                                                                                                                              
+                info.className = 'game-info';                                                                                                                                                            
+                const title = document.createElement('div');                                                                                                                                             
+                title.className = 'game-title';                                                                                                                                                          
+                title.textContent = game.name;                                                                                                                                                           
+                info.appendChild(title);                                                                                                                                                                 
+
+                if (game.tags && game.tags.length > 0) {                                                                                                                                                 
+                    const tagsContainer = document.createElement('div');                                                                                                                                 
+                    tagsContainer.className = 'game-tags';                                                                                                                                               
+                    game.tags.slice(0, 3).forEach(tagText => {                                                                                                                                           
+                        const tag = document.createElement('span');                                                                                                                                      
+                        tag.className = 'tag';                                                                                                                                                           
+                        tag.textContent = tagText;                                                                                                                                                       
+                        tagsContainer.appendChild(tag);                                                                                                                                                  
+                    });                                                                                                                                                                                  
+                    info.appendChild(tagsContainer);                                                                                                                                                     
+                }                                                                                                                                                                                        
+
+                card.appendChild(imgWrapper);                                                                                                                                                            
+                card.appendChild(info);                                                                                                                                                                  
+                grid.appendChild(card);                                                                                                                                                                  
+            });                                                                                                                                                                                          
+        }
+
+        // New Search Filter Logic
+        function filterGames(query) {
+            const lowerQuery = query.toLowerCase();
+            const cards = document.querySelectorAll('.game-card');
+            cards.forEach(card => {
+                const titleText = card.querySelector('.game-title').textContent.toLowerCase();
+                if (titleText.includes(lowerQuery)) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function setStatus(title, message, isError = false) {                                                                                                                                            
+            const titleEl = document.getElementById('loading-title');                                                                                                                                    
+            titleEl.textContent = title;                                                                                                                                                                 
+            titleEl.className = isError ? 'loading-title error' : 'loading-title';                                                                                                                       
+            document.getElementById('loading-subtitle').textContent = message;                                                                                                                           
+            document.getElementById('loading-spinner').style.display = isError ? 'none' : 'block';                                                                                                       
+        }                                                                                                                                                                                                
+
+        function openOverlay(game) {                                                                                                                                                                     
+            activeGameKey = game.key || game.id;                                                                                                                                                       
+            document.getElementById('overlay-game-name').textContent = game.name;                                                                                                                        
+
+            document.getElementById('game-overlay').style.display = 'flex';                                                                                                                              
+            document.getElementById('loading-view').style.display = 'flex';                                                                                                                              
+            document.getElementById('screenSurface').classList.remove('ready');                                                                                                                          
+            document.getElementById('cloudVideo').classList.remove('ready');                                                                                                                             
+            document.body.style.overflow = 'hidden';                                                                                                                                                     
+
+            setStatus('starting', 'creating session request');                                                                                                                                           
+            connect();                                                                                                                                                                                   
+        }                                                                                                                                                                                                
+
+        function closeOverlay() {                                                                                                                                                                        
+            disconnect();                                                                                                                                                                                
+            document.getElementById('game-overlay').style.display = 'none';                                                                                                                              
+            document.body.style.overflow = '';                                                                                                                                                           
+        }                                                                                                                                                                                                
+
+        const timer = document.getElementById('timer');                                                                                                                                                  
+        function renderTimer() {                                                                                                                                                                         
+            if (secondsLeft == null) { timer.textContent = '--:--'; timer.className = ''; return; }                                                                                                      
+            const minutes = Math.floor(Math.max(0, secondsLeft) / 60);                                                                                                                                   
+            const seconds = Math.max(0, secondsLeft) % 60;                                                                                                                                               
+            timer.textContent = `${minutes}:${String(seconds).padStart(2, '0')}`;                                                                                                                      
+            timer.className = secondsLeft <= 60 ? 'expired' : secondsLeft <= 180 ? 'warning' : '';                                                                                                       
+        }                                                                                                                                                                                                
+
+        function startTimer(value) {                                                                                                                                                                     
+            secondsLeft = Math.max(0, Math.ceil(Number(value)));                                                                                                                                         
+            clearInterval(timerInterval);                                                                                                                                                                
+            renderTimer();                                                                                                                                                                               
+            timerInterval = setInterval(() => { if (secondsLeft > 0) secondsLeft--; renderTimer(); }, 1000);                                                                                             
+        }                                                                                                                                                                                                
+
+        function stopTimer() {                                                                                                                                                                           
+            clearInterval(timerInterval); timerInterval = null; secondsLeft = null; renderTimer();                                                                                                       
+        }                                                                                                                                                                                                
+
+        async function request(path, options) {                                                                                                                                                          
+            const response = await fetch(`${apiEndpoint}${path}`, options);                                                                                                                            
+            const text = await response.text();                                                                                                                                                          
+            let data;                                                                                                                                                                                    
+            try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }                                                                                                                 
+            if (!response.ok) throw new Error(data.error || data.raw || response.statusText);                                                                                                        
+            return data;                                                                                                                                                                                 
+        }                                                                                                                                                                                                
+
+        async function waitForSession(uuid) {                                                                                                                                                            
+            const deadline = Date.now() + 120000;                                                                                                                                                        
+            while (Date.now() < deadline) {                                                                                                                                                              
+                const current = await request(`/session/${encodeURIComponent(uuid)}`);                                                                                                                 
+                session = { ...session, ...current };                                                                                                                                                    
+                if (current.state !== 'queued') return current;                                                                                                                                          
+                const position = current.queue_pos ?? current.queue_position;                                                                                                                          
+                setStatus('queued', position == null ? 'waiting for capacity' : `queue position: #${position}`);                                                                                       
+                await new Promise(resolve => setTimeout(resolve, 1500));                                                                                                                                 
+            }                                                                                                                                                                                            
+            throw new Error('Session request timed out in queue.');                                                                                                                                      
+        }                                                                                                                                                                                                
+
+        async function connect() {                                                                                                                                                                       
+            try {                                                                                                                                                                                        
+                session = await request('/session', {                                                                                                                                                    
+                    method: 'POST',                                                                                                                                                                      
+                    headers: { 'Content-Type': 'application/json' },                                                                                                                                     
+                    body: JSON.stringify({ game_key: activeGameKey })                                                                                                                                   
+                });                                                                                                                                                                                      
+
+                const uuid = session.uuid || session.id || session.session_id;                                                                                                                      
+                if (!uuid) throw new Error('Invalid session response from server.');                                                                                                                     
+
+                if (session.state === 'queued') await waitForSession(uuid);                                                                                                                              
+
+                setStatus('starting', 'session acquired, launching VM...');                                                                                                                              
+                const started = await request(`/session/${encodeURIComponent(uuid)}/start`, { method: 'POST' });                                                                                       
+                session = { ...session, ...started };                                                                                                                                                    
+
+                openSignal(uuid, started.signaling_ws);                                                                                                                                                 
+            } catch (error) {                                                                                                                                                                            
+                session = null;                                                                                                                                                                          
+                setStatus('error', `Connection failed: ${error.message}`, true);                                                                                                                       
+            }                                                                                                                                                                                            
+        }                                                                                                                                                                                                
+
+        function openSignal(uuid, signalingWs) {                                                                                                                                                         
+            const fallback = new URL(apiEndpoint);                                                                                                                                                       
+            const protocol = fallback.protocol === 'https:' ? 'wss:' : 'ws:';                                                                                                                            
+            const fallbackUrl = `${protocol}//${fallback.host}${fallback.pathname.replace(/\/$/, '')}/signal/${encodeURIComponent(uuid)}`;                                                            
+            const sessionPath = (signalingWs || fallbackUrl).split('/').filter(Boolean).pop() || encodeURIComponent(uuid);                                                                           
+            const signalUrl = `${protocol}//${fallback.host}${fallback.pathname.replace(/\/$/, '')}/signal/${sessionPath}`;                                                                           
+
+            socket = new WebSocket(signalUrl);                                                                                                                                                           
+            socket.onopen = () => setStatus('signaling', 'connected, waiting for stream');                                                                                                               
+
+            socket.onmessage = async event => {                                                                                                                                                          
+                try {                                                                                                                                                                                    
+                    if (await handleBinarySignal(event.data)) return;                                                                                                                                    
+                    const text = await signalText(event.data);                                                                                                                                           
+                    const start = text.indexOf('{'), end = text.lastIndexOf('}');                                                                                                                        
+                    if (start < 0 || end < start) return;                                                                                                                                              
+                    const message = JSON.parse(text.slice(start, end + 1));                                                                                                                              
+                    await handleSignal(message);                                                                                                                                                         
+                } catch (e) {}                                                                                                                                                                           
+            };                                                                                                                                                                                           
+            socket.onerror = () => setStatus('error', 'Signaling server error', true);                                                                                                                   
+            socket.onclose = () => { socket = null; };                                                                                                                                                   
+        }                                                                                                                                                                                                
+
+        async function handleSignal(message) {                                                                                                                                                           
+            if (message.type === 'time_left' && Number.isFinite(Number(message.time_left))) { startTimer(message.time_left); return; }                                                                
+            if (message.type === 'game_ready') { await createPeer(session && session.ice_servers); return; }                                                                                           
+            if (message.type === 'rtc_answer' && peer) {                                                                                                                                                
+                const description = typeof message.sdp === 'string' ? { type: 'answer', sdp: message.sdp } : message.sdp;                                                                                
+                await peer.setRemoteDescription(description);                                                                                                                                            
+                return;                                                                                                                                                                                  
+            }                                                                                                                                                                                            
+            if (message.type === 'rtc_candidate' && peer) {                                                                                                                                             
+                const candidate = message.candidate && message.candidate.candidate ? message.candidate : message;                                                                                        
+                await peer.addIceCandidate(candidate);                                                                                                                                                   
+                return;                                                                                                                                                                                  
+            }                                                                                                                                                                                            
+            if (message.type === 'game_cap' || message.type === 'game_ended') {                                                                                                                      
+                setStatus('ended', message.message || 'Session ended by host', true);                                                                                                                  
+            }                                                                                                                                                                                            
+        }                                                                                                                                                                                                
+
+        async function handleBinarySignal(data) {                                                                                                                                                        
+            const bytes = await signalBytes(data);                                                                                                                                                       
+            if (!bytes || bytes.length < 5) return false;                                                                                                                                              
+            const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);                                                                                                                 
+            const type = view.getUint8(0);                                                                                                                                                              
+            const nonce = view.getUint32(1, true);                                                                                                                                                      
+            if (type === 3 && nonce === 0) {                                                                                                                                                             
+                const version = new TextEncoder().encode('127.0.0.1');                                                                                                                                   
+                const response = new ArrayBuffer(8 + version.length);                                                                                                                                    
+                const output = new DataView(response);                                                                                                                                                   
+                output.setUint8(0, 1);                                                                                                                                                                   
+                output.setUint32(1, Math.floor(Math.random() * 0xfffffffe) >>> 0, true);                                                                                                                
+                output.setUint8(5, 1);                                                                                                                                                                   
+                output.setUint16(6, 1, true);                                                                                                                                                            
+                new Uint8Array(response).set(version, 8);                                                                                                                                                
+                socket.send(response);                                                                                                                                                                   
+                return true;                                                                                                                                                                             
+            }                                                                                                                                                                                            
+            if (type === 7 && nonce === 0) {                                                                                                                                                             
+                socket.send(new Uint8Array([2, 0, 0, 0, 0, 2, 1]));                                                                                                                                      
+                return true;                                                                                                                                                                             
+            }                                                                                                                                                                                            
+            return false;                                                                                                                                                                                
+        }                                                                                                                                                                                                
+
+        async function signalText(data) {                                                                                                                                                                
+            if (typeof data === 'string') return data;                                                                                                                                                   
+            if (data instanceof Blob) return data.text();                                                                                                                                                
+            if (data instanceof ArrayBuffer) return new TextDecoder().decode(data);                                                                                                                      
+            if (ArrayBuffer.isView(data)) return new TextDecoder().decode(data);                                                                                                                         
+            return String(data);                                                                                                                                                                         
+        }                                                                                                                                                                                                
+
+        async function signalBytes(data) {                                                                                                                                                               
+            if (data instanceof Blob) return new Uint8Array(await data.arrayBuffer());                                                                                                                   
+            if (data instanceof ArrayBuffer) return new Uint8Array(data);                                                                                                                                
+            if (ArrayBuffer.isView(data)) return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);                                                                                          
+            return null;                                                                                                                                                                                 
+        }                                                                                                                                                                                                
+
+        function sendSignal(message) {                                                                                                                                                                   
+            if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));                                                                                                    
+        }                                                                                                                                                                                                
+
+        function toggleFullscreen() {
+            const overlay = document.getElementById('game-overlay');
+            if (!document.fullscreenElement) {
+                overlay.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        async function createPeer(iceServers) {                                                                                                                                                          
+            if (peer) return;                                                                                                                                                                            
+            peer = new RTCPeerConnection({ iceServers: iceServers || [], bundlePolicy: 'max-bundle', rtcpMuxPolicy: 'require' });                                                                      
+            remoteStream = new MediaStream();                                                                                                                                                            
+            const video = document.getElementById('cloudVideo');                                                                                                                                         
+            video.srcObject = remoteStream;                                                                                                                                                              
+
+            inputChannel = peer.createDataChannel('JYSDK', { id: 1, ordered: false, maxRetransmits: 0, priority: 'high' });                                                                              
+            inputChannel.binaryType = 'arraybuffer';                                                                                                                                                     
+
+            inputChannel.onopen = () => {                                                                                                                                                                
+                streamFocused = true;                                                                                                                                                                    
+                setupCursorHandling(inputChannel);                                                                                                                                                       
+            };                                                                                                                                                                                           
+            inputChannel.onclose = () => { streamFocused = false; };                                                                                                                                     
+
+            peer.addTransceiver('audio', { direction: 'recvonly' });                                                                                                                                     
+            peer.addTransceiver('video', { direction: 'recvonly' });                                                                                                                                     
+
+            peer.ontrack = event => {                                                                                                                                                                    
+                remoteStream.addTrack(event.track);                                                                                                                                                      
+                if (event.track.kind === 'video') {                                                                                                                                                      
+                    document.getElementById('loading-view').style.display = 'none';                                                                                                                      
+                    video.classList.add('ready');                                                                                                                                                        
+                    document.getElementById('screenSurface').classList.add('ready');                                                                                                                     
+                    video.play().catch(()=>{});                                                                                                                                                          
+                }                                                                                                                                                                                        
+            };                                                                                                                                                                                           
+
+            peer.onicecandidate = event => {                                                                                                                                                             
+                if (event.candidate) sendSignal({ type: 'rtc_candidate', candidate: event.candidate.toJSON() });                                                                                        
+            };                                                                                                                                                                                           
+
+            const offer = await peer.createOffer();                                                                                                                                                      
+            await peer.setLocalDescription(offer);                                                                                                                                                       
+            sendSignal({ type: 'rtc_offer', sdp: offer.sdp });                                                                                                                                          
+        }                                                                                                                                                                                                
+
+        async function disconnect() {                                                                                                                                                                    
+            if (socket) { socket.close(); socket = null; }                                                                                                                                               
+            if (peer) { peer.close(); peer = null; }                                                                                                                                                     
+            inputChannel = null; activeKeys.clear(); streamFocused = false; pointerLocked = false;                                                                                                       
+            stopTimer();                                                                                                                                                                                 
+
+            const video = document.getElementById('cloudVideo');                                                                                                                                         
+            video.pause(); video.srcObject = null;                                                                                                                                                       
+            video.classList.remove('ready');                                                                                                                                                             
+            document.getElementById('screenSurface').classList.remove('ready');                                                                                                                          
+            remoteStream = null;                                                                                                                                                                         
+
+            if (session && (session.uuid || session.id || session.session_id)) {                                                                                                                    
+                const uuid = session.uuid || session.id || session.session_id;                                                                                                                      
+                try { await request(`/session/${encodeURIComponent(uuid)}/quit`, { method: 'POST', keepalive: true }); } catch (e) {}                                                                  
+            }                                                                                                                                                                                            
+            session = null;                                                                                                                                                                              
+        }                                                                                                                                                                                                
+
+        let currentCursorUrl = null;
+        let streamFocused = false;
+        let pointerLocked = false;
+        let vMouseX = 0, vMouseY = 0;
+        let curX = 0, curY = 0;
+        let mouseButtons = 0;
+        const activeKeys = new Set();
+        let escHoldTimer = null;
+
+        function getVideoRect() {
+            const video = document.getElementById('cloudVideo');
+            const rect = video.getBoundingClientRect();
+
+            const vw = video.videoWidth || rect.width;
+            const vh = video.videoHeight || rect.height;
+
+            if (!vw || !vh) {
+                return {
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height
+                };
+            }
+
+            const scale = Math.min(rect.width / vw, rect.height / vh);
+            const rw = vw * scale;
+            const rh = vh * scale;
+
+            return {
+                left: rect.left + (rect.width - rw) / 2,
+                top: rect.top + (rect.height - rh) / 2,
+                width: rw,
+                height: rh
+            };
+        }
+
+        function dcSend(buf) {
+            if (inputChannel && inputChannel.readyState === 'open') {
+                try {
+                    inputChannel.send(buf);
+                } catch {}
+            }
+        }
+
+        function setupCursorHandling(dc) {
+            const MIMEMAP = {
+                0: "image/x-icon",
+                1: "image/jpeg",
+                2: "image/png",
+                3: "image/gif"
+            };
+
+            const video = document.getElementById('cloudVideo');
+
+            dc.onmessage = (e) => {
+                if (!(e.data instanceof ArrayBuffer)) return;
+
+                const v = new DataView(e.data);
+
+                if (v.byteLength > 4 && v.getUint8(0) === 163 && v.getUint8(1) === 6) {
+                    if (v.byteLength <= 32) {
+                        video.style.cursor = "none";
+
+                        if (currentCursorUrl) {
+                            URL.revokeObjectURL(currentCursorUrl);
+                            currentCursorUrl = null;
+                        }
+                    } else {
+                        const mimeType = MIMEMAP[v.getUint8(2)] || "image/png";
+                        const hotX = v.getUint8(3);
+                        const hotY = v.getUint8(4);
+
+                        const blob = new Blob([e.data.slice(5)], {
+                            type: mimeType
+                        });
+
+                        if (currentCursorUrl) {
+                            URL.revokeObjectURL(currentCursorUrl);
+                        }
+
+                        currentCursorUrl = URL.createObjectURL(blob);
+                        video.style.cursor = `url(${currentCursorUrl}) ${hotX} ${hotY}, default`;
+
+                        if (document.pointerLockElement === video) {
+                            try { document.exitPointerLock(); } catch {}
+                        }
+                    }
+                }
+            };
+        }
+
+        function sendMouse(moveX = 0, moveY = 0, scroll = 0) {
+            if (!inputChannel || inputChannel.readyState !== 'open') return;
+
+            moveX = Math.max(-127, Math.min(127, Math.round(moveX)));
+            moveY = Math.max(-127, Math.min(127, Math.round(moveY)));
+            scroll = Math.max(-127, Math.min(127, Math.round(scroll)));
+
+            const r = getVideoRect();
+            if (!r.width || !r.height) return;
+
+            const absX = Math.floor(((curX - r.left) / r.width) * 10000);
+            const absY = Math.floor(((curY - r.top) / r.height) * 10000);
+
+            const buf = new ArrayBuffer(12);
+            const v = new DataView(buf);
+
+            v.setUint8(0, 1);
+            v.setUint8(1, 11);
+            v.setUint8(2, 2);
+            v.setUint8(3, 8);
+
+            v.setUint16(4, Math.max(0, Math.min(10000, absX)));
+            v.setUint16(6, Math.max(0, Math.min(10000, absY)));
+
+            v.setInt8(8, moveX);
+            v.setInt8(9, moveY);
+            v.setUint8(10, mouseButtons);
+            v.setInt8(11, scroll);
+
+            dcSend(buf);
+        }
+
+        function sendKey(keyCode, isDown) {
+            if (!inputChannel || inputChannel.readyState !== 'open') return;
+
+            const code = Number(keyCode);
+            if (!code) return;
+
+            if (isDown) activeKeys.add(code);
+            else activeKeys.delete(code);
+
+            const buf = new ArrayBuffer(24);
+            const v = new DataView(buf);
+
+            v.setUint8(0, 1);
+            v.setUint8(2, 1);
+            v.setUint8(3, 1);
+            v.setUint16(4, code); // intentional: big-endian
+            v.setUint8(6, isDown ? 1 : 0);
+
+            let offset = 7;
+            for (const k of activeKeys) {
+                if (k !== code && k > 0 && k < 255 && offset < 21) {
+                    v.setUint16(offset, k); // intentional: big-endian
+                    offset += 2;
+                    v.setUint8(offset, 1);
+                    offset++;
+                }
+            }
+
+            v.setUint8(offset++, 255);
+            v.setUint8(1, offset - 1);
+            dcSend(buf.slice(0, offset));
+        }
+
+        const GAMEPAD_BTN_MASK = [
+            4096, 8192, 16384, 32768,
+            256, 512, 0, 0,
+            32, 16, 64, 128,
+            1, 2, 4, 8, 0
+        ];
+
+        function sendGamepad() {
+            if (!inputChannel || inputChannel.readyState !== 'open') return;
+
+            const gamepads = navigator.getGamepads?.() || [];
+
+            for (let i = 0; i < gamepads.length; i++) {
+                const gp = gamepads[i];
+                if (!gp) continue;
+
+                let mask = 0;
+                let lt = 0;
+                let rt = 0;
+
+                for (let b = 0; b < Math.min(gp.buttons.length, 17); b++) {
+                    const btn = gp.buttons[b];
+                    const pressed = typeof btn === "object" ? btn.pressed : btn > 0;
+                    const value = typeof btn === "object" ? btn.value : btn;
+
+                    if (pressed) {
+                        if (b === 6) lt = Math.round(value * 255);
+                        else if (b === 7) rt = Math.round(value * 255);
+                        else mask |= GAMEPAD_BTN_MASK[b];
+                    }
+                }
+
+                const ax = gp.axes;
+
+                const lx = ax[0] ? Math.round(32767 * ax[0]) : 0;
+                const ly = ax[1] ? Math.round(-32767 * ax[1]) : 0;
+                const rx = ax[2] ? Math.round(32767 * ax[2]) : 0;
+                const ry = ax[3] ? Math.round(-32767 * ax[3]) : 0;
+
+                const buf = new ArrayBuffer(17);
+                const v = new DataView(buf);
+
+                v.setUint8(0, 1);
+                v.setUint8(1, 16);
+                v.setUint8(2, 3);
+                v.setUint8(3, 2);
+                v.setUint8(4, i);
+
+                v.setUint16(5, mask, true);
+                v.setUint8(7, lt);
+                v.setUint8(8, rt);
+
+                v.setInt16(9, lx, true);
+                v.setInt16(11, ly, true);
+                v.setInt16(13, rx, true);
+                v.setInt16(15, ry, true);
+
+                dcSend(buf);
+            }
+        }
+
+        function inputLoop() {
+            if (inputChannel && inputChannel.readyState === 'open') {
+                sendGamepad();
+            }
+
+            requestAnimationFrame(inputLoop);
+        }
+        requestAnimationFrame(inputLoop);
+
+        function installVmInput() {
+            const video = document.getElementById('cloudVideo');
+
+            video.addEventListener('mouseenter', () => {
+                if (inputChannel && inputChannel.readyState === 'open') {
+                    streamFocused = true;
+                    video.focus({ preventScroll: true });
+                }
+            });
+
+            video.addEventListener('mouseleave', () => {
+                if (!pointerLocked) {
+                    streamFocused = false;
+                    navigator.keyboard?.unlock?.();
+                }
+            });
+
+            document.addEventListener('pointerlockchange', () => {
+                pointerLocked = document.pointerLockElement === video;
+
+                if (pointerLocked) {
+                    const r = getVideoRect();
+                    vMouseX = Math.max(0, Math.min(r.width, curX - r.left));
+                    vMouseY = Math.max(0, Math.min(r.height, curY - r.top));
+                } else {
+                    navigator.keyboard?.unlock?.();
+                }
+            });
+
+            video.addEventListener('click', () => {
+                if (!inputChannel || inputChannel.readyState !== 'open') return;
+
+                streamFocused = true;
+                video.focus({ preventScroll: true });
+
+                navigator.keyboard?.lock?.().catch(() => {});
+            });
+
+            document.addEventListener('click', (e) => {
+                if (streamFocused && !video.contains(e.target)) {
+                    streamFocused = false;
+                    navigator.keyboard?.unlock?.();
+                }
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (streamFocused && inputChannel?.readyState === 'open') {
+                    const moveX = e.movementX || 0;
+                    const moveY = e.movementY || 0;
+                    const r = getVideoRect();
+
+                    if (pointerLocked) {
+                        vMouseX = Math.max(0, Math.min(r.width, vMouseX + moveX));
+                        vMouseY = Math.max(0, Math.min(r.height, vMouseY + moveY));
+
+                        curX = r.left + vMouseX;
+                        curY = r.top + vMouseY;
+                    } else {
+                        curX = Math.max(r.left, Math.min(r.left + r.width, e.clientX));
+                        curY = Math.max(r.top, Math.min(r.top + r.height, e.clientY));
+                    }
+
+                    sendMouse(moveX, moveY, 0);
+                } else {
+                    curX = e.clientX;
+                    curY = e.clientY;
+                }
+            });
+
+            document.addEventListener('mousedown', (e) => {
+                if (!streamFocused || inputChannel?.readyState !== 'open') return;
+
+                if (video.style.cursor === 'none' && !pointerLocked) {
+                    video.requestPointerLock?.().catch(() => {});
+                }
+
+                mouseButtons = e.buttons;
+                sendMouse(0, 0, 0);
+
+                e.preventDefault();
+            }, { capture: true });
+
+            document.addEventListener('mouseup', (e) => {
+                if (!streamFocused || inputChannel?.readyState !== 'open') return;
+
+                mouseButtons = e.buttons;
+                sendMouse(0, 0, 0);
+
+                e.preventDefault();
+            }, { capture: true });
+
+            document.addEventListener('contextmenu', (e) => {
+                if (streamFocused) e.preventDefault();
+            });
+
+            video.addEventListener('wheel', (e) => {
+                if (!streamFocused || inputChannel?.readyState !== 'open') return;
+
+                e.preventDefault();
+
+                sendMouse(
+                    0,
+                    0,
+                    e.deltaY > 0 ? -1 : 1
+                );
+            }, { passive: false });
+
+            document.addEventListener('keydown', (e) => {
+                if (!streamFocused || inputChannel?.readyState !== 'open') return;
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                const code = e.keyCode || e.which;
+                if (!code) return;
+
+                // Do not resend auto-repeat. The first keydown already tells
+                // the VM that this key is held.
+                if (e.repeat) return;
+
+                if (code === 27 && !escHoldTimer) {
+                    escHoldTimer = setTimeout(() => {
+                        if (document.pointerLockElement) {
+                            try { document.exitPointerLock(); } catch {}
+                        }
+                        streamFocused = false;
+                        escHoldTimer = null;
+                    }, 1200);
+                }
+
+                sendKey(code, true);
+            }, { capture: true });
+
+            document.addEventListener('keyup', (e) => {
+                // Always release keys that this client believes are down,
+                // even if focus was lost between keydown and keyup.
+                const code = e.keyCode || e.which;
+                const shouldRelease = activeKeys.has(code);
+                if (!shouldRelease && !streamFocused) return;
+                if (inputChannel?.readyState !== 'open') return;
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (code === 27) {
+                    clearTimeout(escHoldTimer);
+                    escHoldTimer = null;
+                }
+
+                sendKey(code, false);
+            }, { capture: true });
+        }
+
+        window.addEventListener('blur', () => {
+            if (!inputChannel || inputChannel.readyState !== 'open') return;
+
+            for (const code of activeKeys) {
+                sendKey(code, false);
+            }
+
+            activeKeys.clear();
+            mouseButtons = 0;
+
+            sendMouse(0, 0, 0);
+
+            if (document.pointerLockElement) {
+                try { document.exitPointerLock(); } catch {}
+            }
+
+            streamFocused = false;
+            navigator.keyboard?.unlock?.();
+        });
+
+        installVmInput();
+                                                                                                                                                                                
+        fetchAndRenderGames();                                                                                                                                                                           
+    </script>                                                                                                                                                                                           
+</body>                                                                                                                                                                                                 
+</html>
